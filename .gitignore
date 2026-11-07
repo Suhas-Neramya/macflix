@@ -1,0 +1,10 @@
+.DS_Store
+build/
+module-cache/
+Tests/fixtures/
+.cache/
+*.app/
+*.dmg
+*.zip
+*.tmp
+*.new
