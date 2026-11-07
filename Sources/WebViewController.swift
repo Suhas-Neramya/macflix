@@ -72,17 +72,17 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
 
         let root = NSView(); root.wantsLayer = true; root.layer?.backgroundColor = NSColor.black.cgColor
         let bar = NSView()
-        bar.wantsLayer = true; bar.layer?.backgroundColor = NSColor(white: 0.08, alpha: 1).cgColor
+        bar.wantsLayer = true; bar.layer?.backgroundColor = NSColor.black.cgColor
         bar.translatesAutoresizingMaskIntoConstraints = false
         let title = NSTextField(labelWithString: "Macflix")
-        title.textColor = .secondaryLabelColor; title.font = .systemFont(ofSize: 12, weight: .medium)
+        title.textColor = .secondaryLabelColor; title.font = .systemFont(ofSize: 11, weight: .medium)
         title.translatesAutoresizingMaskIntoConstraints = false
         bar.addSubview(title)
         webView.translatesAutoresizingMaskIntoConstraints = false
         root.addSubview(bar); root.addSubview(webView)
         NSLayoutConstraint.activate([
             bar.leadingAnchor.constraint(equalTo: root.leadingAnchor), bar.trailingAnchor.constraint(equalTo: root.trailingAnchor),
-            bar.topAnchor.constraint(equalTo: root.topAnchor), bar.heightAnchor.constraint(equalToConstant: 38),
+            bar.topAnchor.constraint(equalTo: root.topAnchor), bar.heightAnchor.constraint(equalToConstant: 24),
             title.centerXAnchor.constraint(equalTo: bar.centerXAnchor), title.centerYAnchor.constraint(equalTo: bar.centerYAnchor),
             webView.leadingAnchor.constraint(equalTo: root.leadingAnchor), webView.trailingAnchor.constraint(equalTo: root.trailingAnchor),
             webView.topAnchor.constraint(equalTo: bar.bottomAnchor), webView.bottomAnchor.constraint(equalTo: root.bottomAnchor)
