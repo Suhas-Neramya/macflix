@@ -9,7 +9,7 @@ trap 'rm -rf "$STAGING_DIR"' EXIT
 APP_BUNDLE="$STAGING_DIR/Macflix.app"
 
 mkdir -p "$APP_BUNDLE/Contents/MacOS" "$APP_BUNDLE/Contents/Resources" "$BUILD_DIR/module-cache"
-printf 'Building Macflix 0.2.1 for Apple silicon, macOS 14 or later...\n'
+printf 'Building Macflix 0.2.2 for Apple silicon, macOS 14 or later...\n'
 xcrun swiftc -O -swift-version 5 -warnings-as-errors \
     -target arm64-apple-macosx14.0 -parse-as-library \
     -module-cache-path "$BUILD_DIR/module-cache" \

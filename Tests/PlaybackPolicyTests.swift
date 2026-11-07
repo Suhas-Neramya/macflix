@@ -3,6 +3,13 @@ import Foundation
 @main
 enum PlaybackPolicyTests {
     static func main() {
+        precondition(PlaybackPolicy.isNetflixOrigin(protocol: "https", host: "www.netflix.com", port: 0))
+        precondition(PlaybackPolicy.isNetflixOrigin(protocol: "https", host: "netflix.com", port: 443))
+        precondition(!PlaybackPolicy.isNetflixOrigin(protocol: "https", host: "www.netflix.com", port: 8443))
+        precondition(!PlaybackPolicy.isNetflixOrigin(protocol: "http", host: "www.netflix.com", port: 0))
+        precondition(!PlaybackPolicy.isNetflixOrigin(protocol: "https", host: "notnetflix.com", port: 0))
+        precondition(!PlaybackPolicy.isNetflixOrigin(protocol: "https", host: "netflix.com.attacker.example", port: 0))
+
         precondition(PlaybackPolicy.isNetflix(URL(string: "https://www.netflix.com/watch/123")))
         precondition(PlaybackPolicy.isNetflix(URL(string: "https://NETFLIX.COM/")))
         precondition(!PlaybackPolicy.isNetflix(URL(string: "http://netflix.com/watch/123")))

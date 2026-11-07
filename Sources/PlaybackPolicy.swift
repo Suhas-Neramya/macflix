@@ -1,6 +1,12 @@
 import Foundation
 
 struct PlaybackPolicy {
+    static func isNetflixOrigin(protocol scheme: String, host: String, port: Int) -> Bool {
+        guard scheme.lowercased() == "https", port == 0 || port == 443 else { return false }
+        let host = host.lowercased()
+        return host == "netflix.com" || host.hasSuffix(".netflix.com")
+    }
+
     static func isNetflix(_ url: URL?) -> Bool {
         guard let url, url.scheme == "https", (url.port == nil || url.port == 443),
               let host = url.host?.lowercased() else { return false }

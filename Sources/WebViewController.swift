@@ -8,9 +8,9 @@ private final class NativeAudioMessageHandler: NSObject, WKScriptMessageHandlerW
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage,
                                replyHandler: @escaping (Any?, String?) -> Void) {
         let origin = message.frameInfo.securityOrigin
-        guard message.frameInfo.isMainFrame, origin.protocol.lowercased() == "https",
-              origin.port == 443,
-              PlaybackPolicy.isNetflix(URL(string: "https://\(origin.host)/")), AppConfiguration.nativeAudioEnabled,
+        guard message.frameInfo.isMainFrame,
+              PlaybackPolicy.isNetflixOrigin(protocol: origin.protocol, host: origin.host, port: origin.port),
+              AppConfiguration.nativeAudioEnabled,
               let body = message.body as? [String: Any], let bridge else {
             replyHandler(nil, "Native audio bridge unavailable")
             return
@@ -28,8 +28,7 @@ private final class PlaybackMessageHandler: NSObject, WKScriptMessageHandler {
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         let origin = message.frameInfo.securityOrigin
         guard message.frameInfo.isMainFrame,
-              origin.port == 443,
-              PlaybackPolicy.isNetflix(URL(string: "\(origin.protocol)://\(origin.host)/")),
+              PlaybackPolicy.isNetflixOrigin(protocol: origin.protocol, host: origin.host, port: origin.port),
               let body = message.body as? [String: Any] else { return }
         if body["playbackFailed"] as? Bool == true { onPlaybackFailure?(); return }
         guard let watching = body["watching"] as? Bool else { return }

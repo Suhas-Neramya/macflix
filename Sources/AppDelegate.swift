@@ -78,7 +78,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func showAbout() {
         let credits = NSAttributedString(string: "Developed by Suhas Chandrasekara\n\nIndependent app; not affiliated with Netflix, Inc.")
-        NSApp.orderFrontStandardAboutPanel(options: [.applicationName: "Macflix", .applicationVersion: "0.2.1", .credits: credits])
+        NSApp.orderFrontStandardAboutPanel(options: [.applicationName: "Macflix", .applicationVersion: "0.2.2", .credits: credits])
     }
     @objc private func reload() { windowController?.reload() }
     @objc private func home() { windowController?.goHome() }

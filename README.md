@@ -1,4 +1,4 @@
-# Macflix 0.2.1 Rebuild
+# Macflix 0.2.2 Rebuild
 
 Macflix is an independent macOS app for Netflix, developed by Suhas Chandrasekara. This rebuild provides a fresh app shell with persistent sign-in, playback keyboard controls, fullscreen support, sleep/wake recovery, and experimental audio controls and diagnostics. Subtitle history and its overlay are not included.
 
@@ -26,7 +26,7 @@ To build the installer DMG (this also runs the checks and builds the app):
 bash bin/package_dmg.sh
 ```
 
-The installer and source archive are written to `../Releases/Macflix-0.2.1-Rebuild-AppleSilicon.dmg` and `../Releases/Macflix-0.2.1-Rebuild-Source.zip`. By default the app is ad hoc signed and the DMG is not notarized; macOS may require you to approve opening it. Set `MACFLIX_SIGNING_IDENTITY` to a local signing identity to use that signature for the app bundle. The parser fixture check is skipped when the Apple reference fixtures are absent.
+The installer and source archive are written to `../Releases/Macflix-0.2.2-Rebuild-AppleSilicon.dmg` and `../Releases/Macflix-0.2.2-Rebuild-Source.zip`. By default the app is ad hoc signed and the DMG is not notarized; macOS may require you to approve opening it. Set `MACFLIX_SIGNING_IDENTITY` to a local signing identity to use that signature for the app bundle. The parser fixture check is skipped when the Apple reference fixtures are absent.
 
 ## Manual check
 
