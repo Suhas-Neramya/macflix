@@ -26,6 +26,7 @@ for test in "$PROJECT_ROOT"/Tests/*; do
     [[ -f "$test" ]] && cp "$test" "$SOURCE_DIR/Tests/"
 done
 cp "$PROJECT_ROOT/LICENSE" "$SOURCE_DIR/LICENSE"
+cp "$PROJECT_ROOT/.gitignore" "$SOURCE_DIR/.gitignore"
 cp "$PROJECT_ROOT/README.md" "$SOURCE_DIR/README.md"
 ditto -c -k --norsrc --noextattr --keepParent "$SOURCE_DIR" "$STAGING_DIR/Macflix-0.2.1-Rebuild-Source.zip"
 
