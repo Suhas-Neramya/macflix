@@ -40,15 +40,33 @@
   }, true);
   window.addEventListener('blur', () => held.clear());
   let lastReport = 0, route = '';
+  let progressRoute = '', progressVideo = null, lastProgressTime = 0, started = false;
+  const resetProgressBaseline = event => {
+    const video = event.target;
+    if (video?.tagName === 'VIDEO') { progressVideo = video; lastProgressTime = video.currentTime; }
+  };
+  document.addEventListener('seeking', resetProgressBaseline, true);
+  document.addEventListener('seeked', resetProgressBaseline, true);
   setInterval(() => {
     const watching = location.pathname.startsWith('/watch/');
     const video = watching ? document.querySelector('video') : null;
     const nextRoute = watching ? location.pathname : '';
+    if (nextRoute !== progressRoute) {
+      progressRoute = nextRoute; progressVideo = null; lastProgressTime = 0; started = false;
+    }
+    if (video !== progressVideo) {
+      progressVideo = video; lastProgressTime = video?.currentTime || 0;
+    } else if (video && !video.paused && !video.ended && !video.seeking && video.readyState >= 2 &&
+        Number.isFinite(video.currentTime) && video.currentTime > lastProgressTime + 0.01) {
+      started = true;
+    }
+    if (video && Number.isFinite(video.currentTime)) lastProgressTime = video.currentTime;
     if (nextRoute === route && Date.now() - lastReport < 2000) return;
     route = nextRoute; lastReport = Date.now();
     window.webkit?.messageHandlers.playback?.postMessage({
       watching,
-      playing: !!video && !video.paused && !video.ended
+      playing: !!video && !video.paused && !video.ended,
+      started: watching && started
     });
   }, 500);
 })();

@@ -23,7 +23,7 @@ private final class NativeAudioMessageHandler: NSObject, WKScriptMessageHandlerW
 }
 
 private final class PlaybackMessageHandler: NSObject, WKScriptMessageHandler {
-    var onPlaybackState: ((Bool, Bool) -> Void)?
+    var onPlaybackState: ((Bool, Bool, Bool) -> Void)?
     var onPlaybackFailure: (() -> Void)?
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         let origin = message.frameInfo.securityOrigin
@@ -32,7 +32,7 @@ private final class PlaybackMessageHandler: NSObject, WKScriptMessageHandler {
               let body = message.body as? [String: Any] else { return }
         if body["playbackFailed"] as? Bool == true { onPlaybackFailure?(); return }
         guard let watching = body["watching"] as? Bool else { return }
-        onPlaybackState?(watching, body["playing"] as? Bool == true)
+        onPlaybackState?(watching, body["playing"] as? Bool == true, body["started"] as? Bool == true)
     }
 }
 
@@ -50,6 +50,12 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
     private var playbackActivity: NSObjectProtocol?
     private var recoveryAttempts = 0
     private var diagnosticsWatchPath: String?
+    private var firstPlaybackRecoveryTimer: Timer?
+    private var firstPlaybackRecoveryPath: String?
+    private var firstPlaybackRecoverySuppressed = false
+
+    private let firstPlaybackStartedKey = "macflix.hasStartedPlayback"
+    private let firstPlaybackRetryKey = "macflix.firstPlaybackRecoveryAttempted"
 
     override func loadView() {
         if AppConfiguration.nativeAudioEnabled {
@@ -63,9 +69,10 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
         webView.customUserAgent = AppConfiguration.userAgent
         webView.allowsBackForwardNavigationGestures = true
         webView.wantsLayer = true
-        playbackHandler.onPlaybackState = { [weak self] watching, playing in
+        playbackHandler.onPlaybackState = { [weak self] watching, playing, started in
             guard let self else { return }
             self.setPlaying(watching && playing)
+            self.updateFirstPlaybackRecovery(watching: watching, started: watching && started)
             self.inspectTitleIfNeeded(watching: watching)
         }
         playbackHandler.onPlaybackFailure = { [weak self] in self?.showPlaybackFailure() }
@@ -102,6 +109,7 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
 
     deinit {
         audioTimer?.invalidate()
+        cancelFirstPlaybackRecovery()
         if let sleepObserver { NSWorkspace.shared.notificationCenter.removeObserver(sleepObserver) }
         if let wakeObserver { NSWorkspace.shared.notificationCenter.removeObserver(wakeObserver) }
         nativeAudioBridge?.stop()
@@ -206,6 +214,8 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
     }
 
     private func pauseForSleep() {
+        firstPlaybackRecoverySuppressed = true
+        cancelFirstPlaybackRecovery()
         nativeAudioBridge?.stop()
         setPlaying(false)
         webView.evaluateJavaScript("window.macflixPlayback?.pause() ?? document.querySelector('video')?.pause()", completionHandler: nil)
@@ -221,6 +231,80 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
                 playbackActivity = ProcessInfo.processInfo.beginActivity(options: [.userInitiatedAllowingIdleSystemSleep, .latencyCritical], reason: "Macflix Playback Active")
             }
         } else { endPlaybackActivity() }
+    }
+
+    private func updateFirstPlaybackRecovery(watching: Bool, started: Bool) {
+        let defaults = UserDefaults.standard
+        if started {
+            defaults.set(true, forKey: firstPlaybackStartedKey)
+            cancelFirstPlaybackRecovery()
+            return
+        }
+        guard !firstPlaybackRecoverySuppressed,
+              !defaults.bool(forKey: firstPlaybackStartedKey),
+              !defaults.bool(forKey: firstPlaybackRetryKey),
+              watching, let url = webView.url, PlaybackPolicy.isWatching(url) else {
+            cancelFirstPlaybackRecovery()
+            return
+        }
+
+        let path = url.path
+        guard firstPlaybackRecoveryPath != path else { return }
+        cancelFirstPlaybackRecovery()
+        firstPlaybackRecoveryPath = path
+        firstPlaybackRecoveryTimer = Timer.scheduledTimer(withTimeInterval: 45, repeats: false) { [weak self] _ in
+            self?.checkFirstPlaybackStartup(path: path)
+        }
+    }
+
+    private func checkFirstPlaybackStartup(path: String) {
+        firstPlaybackRecoveryTimer = nil
+        guard firstPlaybackRecoveryPath == path,
+              let url = webView.url, PlaybackPolicy.isWatching(url), url.path == path else { return }
+        let script = """
+        (() => {
+          const videos = Array.from(document.querySelectorAll('video'));
+          const video = videos.find(item => !item.paused && !item.ended) || videos[0] || null;
+          const active = document.activeElement;
+          return {
+            path: location.pathname,
+            videoPresent: !!video,
+            readyState: video ? video.readyState : -1,
+            paused: video ? video.paused : false,
+            ended: video ? video.ended : false,
+            hasError: !!(video && video.error),
+            editing: !!active && (['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName) || active.isContentEditable)
+          };
+        })()
+        """
+        webView.evaluateJavaScript(script) { [weak self] result, error in
+            guard let self, error == nil, self.firstPlaybackRecoveryPath == path,
+                  let currentURL = self.webView.url, PlaybackPolicy.isWatching(currentURL), currentURL.path == path,
+                  let state = result as? [String: Any],
+                  let currentPath = state["path"] as? String,
+                  let videoPresent = state["videoPresent"] as? Bool,
+                  let readyState = state["readyState"] as? Int else { return }
+            let defaults = UserDefaults.standard
+            guard FirstPlaybackRecoveryPolicy.shouldReload(
+                hasStartedPlayback: defaults.bool(forKey: self.firstPlaybackStartedKey),
+                retryAttempted: defaults.bool(forKey: self.firstPlaybackRetryKey),
+                expectedWatchPath: path, currentWatchPath: currentPath,
+                videoPresent: videoPresent, readyState: readyState,
+                paused: state["paused"] as? Bool == true,
+                ended: state["ended"] as? Bool == true,
+                hasError: state["hasError"] as? Bool == true,
+                editing: state["editing"] as? Bool == true) else { return }
+
+            defaults.set(true, forKey: self.firstPlaybackRetryKey)
+            self.cancelFirstPlaybackRecovery()
+            self.webView.reload()
+        }
+    }
+
+    private func cancelFirstPlaybackRecovery() {
+        firstPlaybackRecoveryTimer?.invalidate()
+        firstPlaybackRecoveryTimer = nil
+        firstPlaybackRecoveryPath = nil
     }
 
     private func inspectTitleIfNeeded(watching: Bool) {
@@ -248,6 +332,9 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
         guard let target = action.targetFrame, target.isMainFrame else { decisionHandler(.allow); return }
         guard let url = action.request.url else { decisionHandler(.cancel); return }
+        if !PlaybackPolicy.isWatching(url) || url.path != firstPlaybackRecoveryPath {
+            cancelFirstPlaybackRecovery()
+        }
         if ["about", "blob", "data", "javascript"].contains(url.scheme?.lowercased() ?? "") { decisionHandler(.allow); return }
         if PlaybackPolicy.keepInApp(url) { nativeAudioBridge?.stop(); decisionHandler(.allow); return }
         if action.navigationType == .linkActivated { NSWorkspace.shared.open(url); decisionHandler(.cancel) }
@@ -264,10 +351,13 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         recoveryAttempts = 0
         setPlaying(false)
+        updateFirstPlaybackRecovery(watching: PlaybackPolicy.isWatching(webView.url), started: false)
         inspectTitleIfNeeded(watching: PlaybackPolicy.isWatching(webView.url))
     }
 
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        firstPlaybackRecoverySuppressed = true
+        cancelFirstPlaybackRecovery()
         nativeAudioBridge?.stop()
         setPlaying(false)
         guard recoveryAttempts < 5 else {

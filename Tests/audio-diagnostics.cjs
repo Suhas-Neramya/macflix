@@ -28,7 +28,11 @@ function setup(options = {}) {
         getAllPlayerSessionIds: () => ['private-session-id'], getVideoPlayerBySessionId: () => player
       }})})}}
     },
-    document: {createElement: () => ({canPlayType: () => options.ec3Support === false ? '' : 'probably'})},
+    document: {
+      createElement: () => ({canPlayType: () => options.ec3Support === false ? '' : 'probably'}),
+      querySelector: () => options.noVideo ? null : {readyState: options.readyState ?? 0, networkState: options.networkState ?? 0,
+        paused: options.paused ?? true, error: options.videoError === undefined ? null : {code: options.videoError, message: 'private media error'}}
+    },
     navigator: options.noCapabilities ? {} : {mediaCapabilities: {decodingInfo: async config => {
       events.push('decoding-info');
       seen.push(config);
@@ -43,6 +47,7 @@ function setup(options = {}) {
   const good = setup({current: {privateToken: 'secret-token'}, candidate: {urls: ['https://private.example/token'], privateToken: 'secret-token'}});
   let report = await good.run();
   assert.equal(report.spatialAudioCapability.length, 6);
+  assert.deepEqual(report.startup, {videoPresent: true, readyState: 0, networkState: 0, paused: true, videoErrorCode: null, playerSessionPresent: true});
   assert.equal(good.seen.filter(x => x.audio.channels === '16' && x.audio.spatialRendering).length, 2);
   assert.equal(good.selections.length, 1);
   assert(good.events.indexOf('set-audio-track') < good.events.indexOf('decoding-info'), 'request a matching track before slow capability probes');
@@ -54,7 +59,11 @@ function setup(options = {}) {
   assert.deepEqual(report.nativeAudioBridge, {enabled: true, available: true, active: false, reason: 'parser-error', state: 'ready', nativeTime: 12.5, driftSeconds: 0.03, seeking: false, rate: 1, segments: 3, bytes: 2048, audible: true});
   assert(!JSON.stringify(report).includes('privateToken'));
   assert(!JSON.stringify(report).includes('127.0.0.1'));
+  assert(!JSON.stringify(report).includes('private media error'));
   assert(!JSON.stringify(report).includes('"id"'));
+  const startup = setup({noVideo: true, noPlayer: true, readyState: 99, networkState: -1, videoError: 9});
+  report = await startup.run(false);
+  assert.deepEqual(report.startup, {videoPresent: false, readyState: null, networkState: null, paused: null, videoErrorCode: null, playerSessionPresent: false});
   await good.run();
   assert.equal(good.selections.length, 1);
 

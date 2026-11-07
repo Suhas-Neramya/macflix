@@ -28,6 +28,33 @@ enum PlaybackPolicyTests {
         precondition(!PlaybackPolicy.keepInApp(URL(string: "https://netflix.com:8443/")!))
         precondition(!PlaybackPolicy.keepInApp(URL(string: "https://netflix.com.attacker.example/")!))
 
-        print("Passed: Netflix playback routing and HTTPS in-app host boundaries.")
+        precondition(shouldRecover())
+        precondition(shouldRecover(readyState: 1))
+        precondition(shouldRecover(videoPresent: false, readyState: -1))
+        precondition(!shouldRecover(videoPresent: false, readyState: -1, paused: true))
+        precondition(!shouldRecover(hasStartedPlayback: true))
+        precondition(!shouldRecover(retryAttempted: true))
+        precondition(!shouldRecover(currentPath: "/watch/456"))
+        precondition(!shouldRecover(expectedPath: "/browse", currentPath: "/browse"))
+        precondition(!shouldRecover(expectedPath: "/watchfoo/123", currentPath: "/watchfoo/123"))
+        precondition(!shouldRecover(paused: true))
+        precondition(!shouldRecover(readyState: 2))
+        precondition(!shouldRecover(readyState: 4))
+        precondition(!shouldRecover(readyState: -1))
+        precondition(!shouldRecover(ended: true))
+        precondition(!shouldRecover(hasError: true))
+        precondition(!shouldRecover(editing: true))
+
+        print("Passed: HTTPS Netflix origin/routing and bounded first-play recovery guards.")
+    }
+
+    private static func shouldRecover(hasStartedPlayback: Bool = false, retryAttempted: Bool = false,
+                                      expectedPath: String = "/watch/123", currentPath: String = "/watch/123",
+                                      videoPresent: Bool = true, readyState: Int = 0, paused: Bool = false,
+                                      ended: Bool = false, hasError: Bool = false, editing: Bool = false) -> Bool {
+        FirstPlaybackRecoveryPolicy.shouldReload(hasStartedPlayback: hasStartedPlayback,
+            retryAttempted: retryAttempted, expectedWatchPath: expectedPath, currentWatchPath: currentPath,
+            videoPresent: videoPresent, readyState: readyState, paused: paused, ended: ended,
+            hasError: hasError, editing: editing)
     }
 }

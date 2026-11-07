@@ -7,7 +7,7 @@
 	<key>CFBundleExecutable</key>
 	<string>Macflix</string>
 	<key>CFBundleIconFile</key>
-	<string>MacflixIcon</string>
+	<string>MacflixIcon0_2_4</string>
 	<key>CFBundleIdentifier</key>
 	<string>local.macflix.rebuild</string>
 	<key>CFBundleInfoDictionaryVersion</key>
@@ -17,9 +17,9 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.2.3</string>
+	<string>0.2.4</string>
 	<key>CFBundleVersion</key>
-	<string>4</string>
+	<string>5</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>14.0</string>
 	<key>NSAppSleepDisabled</key>

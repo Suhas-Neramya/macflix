@@ -1,8 +1,18 @@
-# Macflix 0.2.3 Rebuild
+# Macflix Rebuild
+
+![Macflix — a focused Netflix app for macOS](docs/macflix-hero.png)
 
 Macflix is an independent macOS app for Netflix, developed by Suhas Chandrasekara. This rebuild provides a fresh app shell with persistent sign-in, playback keyboard controls, fullscreen support, sleep/wake recovery, and experimental audio controls and diagnostics. Subtitle history and its overlay are not included.
 
 The app uses a separate persistent WebKit profile, so sign in to Netflix again the first time you use this build. It does not change or replace the existing Macflix or Netflix apps in this repository or on your Mac. Macflix is not affiliated with Netflix, Inc.
+
+## Features
+
+- A native macOS window with Netflix playback and navigation.
+- Persistent sign-in in a separate Macflix WebKit profile.
+- Space and K playback controls, plus Netflix and menu fullscreen controls.
+- An experimental Atmos request and native audio bridge, with Audio Status diagnostics. Native audio may fall back to WebKit; diagnostics do not verify Atmos output.
+- A single first-play recovery refresh if the first Netflix watch route remains unready for 45 seconds. It skips paused, ended, errored, or actively edited pages and does not clear sign-in data.
 
 ## Requirements
 
@@ -26,7 +36,7 @@ To build the installer DMG (this also runs the checks and builds the app):
 bash bin/package_dmg.sh
 ```
 
-The installer and source archive are written to `../Releases/Macflix-0.2.3-Rebuild-AppleSilicon.dmg` and `../Releases/Macflix-0.2.3-Rebuild-Source.zip`. By default the app is ad hoc signed and the DMG is not notarized; macOS may require you to approve opening it. Set `MACFLIX_SIGNING_IDENTITY` to a local signing identity to use that signature for the app bundle. The parser fixture check is skipped when the Apple reference fixtures are absent.
+The installer and source archive are written to `dist/Macflix-<version>-Rebuild-AppleSilicon.dmg` and `dist/Macflix-<version>-Rebuild-Source.zip`. By default the app is ad hoc signed and the DMG is not notarized; macOS may require you to approve opening it. Set `MACFLIX_SIGNING_IDENTITY` to a local signing identity to use that signature for the app bundle. The parser fixture check is skipped when the Apple reference fixtures are absent.
 
 ## Manual check
 
@@ -40,5 +50,9 @@ The installer and source archive are written to `../Releases/Macflix-0.2.3-Rebui
 - Confirm no subtitle-history overlay appears.
 
 Native Atmos is experimental and may fall back to WebKit audio. Some retained audio code is covered by a third-party MIT license; see [LICENSE](LICENSE) for the required copyright and license notices.
+
+## GitHub releases
+
+Push a `vMAJOR.MINOR.PATCH` tag matching `CFBundleShortVersionString` in `Resources/Info.plist`. GitHub Actions runs the checks, builds the Apple silicon installer and source archive, calculates SHA-256 checksums, and creates a draft release for review. See [RELEASE.md](RELEASE.md) for the release steps.
 
 Inspired by [Matthew Daniel Murphy](https://github.com/mattdanielmurphy/netflix-native).

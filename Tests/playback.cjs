@@ -8,12 +8,13 @@ function setup({host = 'www.netflix.com', route = '/watch/123', focused = null, 
   videoElement = true, controlButton = false, buttonDisabled = false, buttonWidth = 40, playReject = false} = {}) {
   const listeners = {}, intervals = [], actions = [], routes = [];
   let now = 10_000, videoQueries = 0;
-  const video = {paused: false, pause() { actions.push('video.pause'); this.paused = true; }, play() {
+  const video = {paused: false, ended: false, seeking: false, readyState: 0, currentTime: 0,
+    pause() { actions.push('video.pause'); this.paused = true; }, play() {
     actions.push('video.play');
     if (playReject) return Promise.reject(new Error('play blocked'));
     this.paused = false;
     return Promise.resolve();
-  }, ended: false};
+  }};
   const controller = {isPaused: () => video.paused, pause() { actions.push('pause'); video.paused = true; }, play() { actions.push('play'); video.paused = false; }};
   const player = playerAPI ? {appContext: {getPlayerApp: () => ({getAPI: () => ({videoPlayer: {
     getAllPlayerSessionIds: () => ['session'], getVideoPlayerBySessionId: () => controller
@@ -28,6 +29,7 @@ function setup({host = 'www.netflix.com', route = '/watch/123', focused = null, 
   const context = vm.createContext({
     location: {hostname: host, pathname: route}, window,
     document: {activeElement: focused, fullscreenElement: fullscreen.element,
+      addEventListener: (name, fn) => { listeners[`document:${name}`] = fn; },
       documentElement: {requestFullscreen: () => fullscreen.calls.push('request')},
       exitFullscreen: () => fullscreen.calls.push('exit'),
       querySelector: selector => {
@@ -122,19 +124,41 @@ assert.deepEqual(routeStatus.routes.map(route => route.watching), [false, true, 
 const telemetry = setup();
 telemetry.intervals[0]();
 const firstMetrics = JSON.parse(JSON.stringify(telemetry.routes.at(-1)));
-assert.deepEqual(firstMetrics, {watching: true, playing: true});
-assert.deepEqual(Object.keys(firstMetrics).sort(), ['playing', 'watching']);
+assert.deepEqual(firstMetrics, {watching: true, playing: true, started: false});
+assert.deepEqual(Object.keys(firstMetrics).sort(), ['playing', 'started', 'watching']);
+telemetry.video.readyState = 2;
+telemetry.advance(2000);
+telemetry.intervals[0]();
+assert.equal(telemetry.routes.at(-1).started, false, 'stationary spinner must not count as playback');
+telemetry.video.currentTime = 0.02;
+telemetry.advance(2000);
+telemetry.intervals[0]();
+assert.equal(telemetry.routes.at(-1).started, true, 'real forward progress latches playback started');
+telemetry.video.seeking = true;
+telemetry.video.currentTime = 20;
+telemetry.listeners['document:seeking']({target: telemetry.video});
+telemetry.video.seeking = false;
+telemetry.listeners['document:seeked']({target: telemetry.video});
+telemetry.advance(2000);
+telemetry.intervals[0]();
+assert.equal(telemetry.routes.at(-1).started, true, 'seek jump does not clear a real-start latch');
 telemetry.video.paused = true;
 telemetry.advance(2000);
 telemetry.intervals[0]();
 assert.equal(telemetry.routes.at(-1).playing, false);
+assert.equal(telemetry.routes.at(-1).started, true, 'pause does not clear a real-start latch');
 telemetry.video.paused = false;
 telemetry.advance(2000);
 telemetry.intervals[0]();
 assert.equal(telemetry.routes.at(-1).playing, true);
+telemetry.context.location.pathname = '/watch/456';
+telemetry.video.currentTime = 20;
+telemetry.advance(2000);
+telemetry.intervals[0]();
+assert.equal(telemetry.routes.at(-1).started, false, 'new watch route gets a fresh latch and baseline');
 telemetry.context.location.pathname = '/browse';
 telemetry.intervals[0]();
-assert.deepEqual(JSON.parse(JSON.stringify(telemetry.routes.at(-1))), {watching: false, playing: false});
+assert.deepEqual(JSON.parse(JSON.stringify(telemetry.routes.at(-1))), {watching: false, playing: false, started: false});
 const hiddenTelemetry = setup({route: '/browse'});
 hiddenTelemetry.intervals[0]();
 assert.equal(hiddenTelemetry.videoQueries(), 0);
@@ -171,5 +195,5 @@ async function testPlayFailureFallbacks() {
 }
 
 testPlayFailureFallbacks().then(() => {
-  console.log('Passed: media-element play/pause, modifiers, editable fields, repeats, fullscreen preservation, F shortcut pass-through, sleep pause, safe failure fallback, and playback-state-only route status.');
+  console.log('Passed: media-element play/pause, modifiers, editable fields, repeats, fullscreen preservation, F shortcut pass-through, sleep pause, safe failure fallback, route status, and actual-progress started latch.');
 }).catch(error => { console.error(error); process.exitCode = 1; });

@@ -7,12 +7,24 @@ async function (preferAtmos = false, nativeBridgeEnabled = false) {
     atmosSelection: 'Not attempted',
     dolbyDigitalPlusCanPlay: document.createElement('video').canPlayType('audio/mp4; codecs="ec-3"'),
     spatialAudioCapability: [],
+    startup: {videoPresent: false, readyState: null, networkState: null, paused: null, videoErrorCode: null, playerSessionPresent: false},
     note: 'Capability checks and track metadata do not prove actual Atmos rendering.'
   };
   if (location.hostname !== 'netflix.com' && !location.hostname.endsWith('.netflix.com')) {
     report.trackInspection = 'Not a Netflix page';
     return JSON.stringify(report, null, 2);
   }
+  const video = document.querySelector('video');
+  const boundedState = (value, max) => Number.isInteger(value) && value >= 0 && value <= max ? value : null;
+  const errorCode = video?.error?.code;
+  report.startup = {
+    videoPresent: !!video,
+    readyState: boundedState(video?.readyState, 4),
+    networkState: boundedState(video?.networkState, 3),
+    paused: typeof video?.paused === 'boolean' ? video.paused : null,
+    videoErrorCode: Number.isInteger(errorCode) && errorCode >= 1 && errorCode <= 4 ? errorCode : null,
+    playerSessionPresent: false
+  };
   const native = window.__netflixDevNativeAudioStatus;
   report.nativeAudioBridge = {
     enabled: nativeBridgeEnabled === true,
@@ -86,6 +98,7 @@ async function (preferAtmos = false, nativeBridgeEnabled = false) {
     const playerApp = typeof app?.getPlayerApp === 'function' ? app.getPlayerApp() : app?.state?.playerApp;
     const api = playerApp?.getAPI?.()?.videoPlayer;
     const sessions = api?.getAllPlayerSessionIds?.();
+    report.startup.playerSessionPresent = Array.isArray(sessions) && sessions.length > 0;
     if (!Array.isArray(sessions) || !sessions.length) return;
     const player = api.getVideoPlayerBySessionId(sessions[sessions.length - 1]);
     if (typeof player?.getAudioTrack !== 'function') {

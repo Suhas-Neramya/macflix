@@ -17,6 +17,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             "macflix.requestMultichannelAudio": true,
             "macflix.nativeAudioBridgeEnabled": true
         ])
+        installDockIcon()
         setupMenu()
         let controller = MainWindowController()
         windowController = controller
@@ -31,6 +32,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+
+    private func installDockIcon() {
+        guard let url = Bundle.main.url(forResource: "MacflixDock", withExtension: "png"),
+              let image = NSImage(contentsOf: url) else { return }
+        NSApp.applicationIconImage = image
+        let tile = NSApp.dockTile
+        let imageView = NSImageView(frame: NSRect(origin: .zero, size: tile.size))
+        imageView.image = image
+        imageView.imageScaling = .scaleProportionallyUpOrDown
+        imageView.imageAlignment = .alignCenter
+        imageView.setAccessibilityLabel("Macflix")
+        imageView.autoresizingMask = [.width, .height]
+        tile.contentView = imageView
+        tile.display()
+    }
 
     private func setupMenu() {
         let menu = NSMenu()
@@ -78,7 +94,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func showAbout() {
         let credits = NSAttributedString(string: "Developed by Suhas Chandrasekara\n\nIndependent app; not affiliated with Netflix, Inc.")
-        NSApp.orderFrontStandardAboutPanel(options: [.applicationName: "Macflix", .applicationVersion: "0.2.3", .credits: credits])
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Beta"
+        NSApp.orderFrontStandardAboutPanel(options: [.applicationName: "Macflix", .applicationVersion: version, .credits: credits])
     }
     @objc private func reload() { windowController?.reload() }
     @objc private func home() { windowController?.goHome() }

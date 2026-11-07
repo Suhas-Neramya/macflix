@@ -26,3 +26,16 @@ struct PlaybackPolicy {
     }
 }
 
+struct FirstPlaybackRecoveryPolicy {
+    static func shouldReload(hasStartedPlayback: Bool, retryAttempted: Bool,
+                             expectedWatchPath: String, currentWatchPath: String,
+                             videoPresent: Bool, readyState: Int, paused: Bool,
+                             ended: Bool, hasError: Bool, editing: Bool) -> Bool {
+        guard !hasStartedPlayback, !retryAttempted,
+              expectedWatchPath.hasPrefix("/watch/"), expectedWatchPath == currentWatchPath,
+              !paused, !ended, !hasError, !editing else { return false }
+        guard videoPresent else { return true }
+        return readyState >= 0 && readyState < 2
+    }
+}
+
