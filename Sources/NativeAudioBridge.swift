@@ -141,19 +141,31 @@ final class NativeAudioBridge {
 
     private func snapshot(state fallbackState: String, requestedTime: Double? = nil, requestedRate: Double = 1, requestedSeeking: Bool = false) -> [String: Any] {
         guard let player, let item = player.currentItem else {
-            return ["state": fallbackState, "nativeTime": 0.0, "driftSeconds": 0.0, "seeking": false, "rate": requestedRate, "segments": segments.count, "bytes": totalBytes, "audible": false]
+            return ["state": fallbackState, "nativeTime": 0.0, "driftSeconds": 0.0, "seeking": false, "rate": requestedRate, "segments": segments.count, "bytes": totalBytes, "audible": false, "clearJOCSignaled": parser.hasClearJOC]
         }
         let native = player.currentTime().seconds
         let mapped = native.isFinite ? native + (anchor ?? 0) : 0
         let time = mapped.isFinite ? mapped : 0
         let webTime = requestedTime ?? lastWebTime
+        let targetItemTime = anchor.map { webTime - $0 }
         let drift = time - webTime
         let hasData = item.loadedTimeRanges.contains { range in
             CMTimeRangeContainsTime(range.timeRangeValue, time: player.currentTime())
         }
         let isReady = hasData && (desiredPaused || player.timeControlStatus == .playing) && item.status == .readyToPlay && anchor != nil && seekable(item, contains: webTime - (anchor ?? 0)) && abs(drift) < 0.15 && !seeking && !requestedSeeking
         let audible = isReady && !player.isMuted && !desiredMuted && handshakeAudible && Date().timeIntervalSince(lastHeartbeat) <= 2 && !desiredPaused && requestedRate == 1
-        return ["state": isReady ? "ready" : fallbackState, "nativeTime": time, "driftSeconds": drift.isFinite ? drift : 0, "seeking": seeking || requestedSeeking, "rate": Double(player.rate), "segments": segments.count, "bytes": totalBytes, "audible": audible, "servedSegments": servedSegments.count, "nativeSeekable": item.seekableTimeRanges.map { [$0.timeRangeValue.start.seconds, $0.timeRangeValue.duration.seconds] }, "loaded": item.loadedTimeRanges.map { [$0.timeRangeValue.start.seconds, $0.timeRangeValue.duration.seconds] }]
+        var result: [String: Any] = ["state": isReady ? "ready" : fallbackState, "nativeTime": time, "driftSeconds": drift.isFinite ? drift : 0, "seeking": seeking || requestedSeeking, "rate": Double(player.rate), "segments": segments.count, "bytes": totalBytes, "audible": audible, "servedSegments": servedSegments.count, "nativeSeekable": item.seekableTimeRanges.map { [$0.timeRangeValue.start.seconds, $0.timeRangeValue.duration.seconds] }, "loaded": item.loadedTimeRanges.map { [$0.timeRangeValue.start.seconds, $0.timeRangeValue.duration.seconds] }, "itemStatus": item.status == .readyToPlay ? "ready" : (item.status == .failed ? "failed" : "preparing"), "timeControlStatus": player.timeControlStatus == .playing ? "playing" : (player.timeControlStatus == .waitingToPlayAtSpecifiedRate ? "waiting" : "paused"), "clearJOCSignaled": parser.hasClearJOC]
+        if native.isFinite { result["itemTime"] = native }
+        if webTime.isFinite { result["webTime"] = webTime }
+        if let anchor, anchor.isFinite { result["anchorSeconds"] = anchor }
+        if let targetItemTime, targetItemTime.isFinite {
+            result["targetItemTime"] = targetItemTime
+            result["targetSeekable"] = seekable(item, contains: targetItemTime)
+            result["targetLoaded"] = item.loadedTimeRanges.contains { CMTimeRangeContainsTime($0.timeRangeValue, time: CMTime(seconds: targetItemTime, preferredTimescale: 48_000)) }
+        }
+        if let first = segments.first { result["firstSegmentStart"] = first.start; result["firstSegmentEnd"] = first.end }
+        if let last = segments.last { result["lastSegmentEnd"] = last.end }
+        return result
     }
 
     private func preparePlayer() throws {

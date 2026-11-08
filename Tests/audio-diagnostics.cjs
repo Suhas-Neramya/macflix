@@ -23,7 +23,7 @@ function setup(options = {}) {
     location: {hostname: options.host || 'www.netflix.com'},
     window: {
       __netflixNativeMultichannelStatus: {enabled: options.enabled !== false, changedSerializations: 1, requestedAtmos: true, privateToken: 'secret-token'},
-      __netflixDevNativeAudioStatus: {state: 'ready', reason: 'parser-error', nativeTime: 12.5, driftSeconds: 0.03, seeking: false, rate: 1, segments: 3, bytes: 2048, audible: true, url: 'http://127.0.0.1/private', privateToken: 'secret-token'},
+      __netflixDevNativeAudioStatus: {state: 'ready', reason: 'parser-error', nativeTime: 12.5, driftSeconds: 0.03, seeking: false, rate: 1, segments: 3, bytes: 2048, servedSegments: 2, nativeSeekable: [[0, 10], ['private-url', 1], [0, 1000001]], loaded: [[1, 5]], timeline: {itemTime: 2, webTime: 2.03, anchorSeconds: 10.5, targetItemTime: -8.47, targetSeekable: false, targetLoaded: false, firstSegmentStart: 10.5, firstSegmentEnd: 12.5, lastSegmentEnd: 15.5, sourceBufferTimestampOffset: -18.65, firstSourceTimestampOffset: -18.65, timestampOffsetChanges: 2, itemStatus: 'ready', timeControlStatus: 'playing', clearJOCSignaled: true, privateToken: 'secret-token', pageURL: 'https://private.example/path'}, audible: true, url: 'http://127.0.0.1/private', privateToken: 'secret-token'},
       netflix: options.noPlayer ? undefined : {appContext: {getPlayerApp: () => ({getAPI: () => ({videoPlayer: {
         getAllPlayerSessionIds: () => ['private-session-id'], getVideoPlayerBySessionId: () => player
       }})})}}
@@ -56,7 +56,7 @@ function setup(options = {}) {
   assert(!JSON.stringify(report).includes('secret-token'));
   assert(!JSON.stringify(report).includes('private-session-id'));
   assert(!JSON.stringify(report).includes('private.example'));
-  assert.deepEqual(report.nativeAudioBridge, {enabled: true, available: true, active: false, reason: 'parser-error', state: 'ready', nativeTime: 12.5, driftSeconds: 0.03, seeking: false, rate: 1, segments: 3, bytes: 2048, audible: true});
+  assert.deepEqual(report.nativeAudioBridge, {enabled: true, available: true, active: false, reason: 'parser-error', state: 'ready', nativeTime: 12.5, driftSeconds: 0.03, seeking: false, rate: 1, segments: 3, bytes: 2048, servedSegments: 2, nativeSeekable: [[0, 10]], loaded: [[1, 5]], timeline: {itemTime: 2, webTime: 2.03, anchorSeconds: 10.5, targetItemTime: -8.47, targetSeekable: false, targetLoaded: false, firstSegmentStart: 10.5, firstSegmentEnd: 12.5, lastSegmentEnd: 15.5, sourceBufferTimestampOffset: -18.65, firstSourceTimestampOffset: -18.65, timestampOffsetChanges: 2, itemStatus: 'ready', timeControlStatus: 'playing', clearJOCSignaled: true}, audible: true});
   assert(!JSON.stringify(report).includes('privateToken'));
   assert(!JSON.stringify(report).includes('127.0.0.1'));
   assert(!JSON.stringify(report).includes('private media error'));

@@ -107,7 +107,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 enum AppConfiguration {
     static let homeURL = URL(string: "https://www.netflix.com")!
     static let profileID = UUID(uuidString: "187EA74C-BD22-44B4-9B75-53A9212AC89D")!
-    static let userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Safari/605.1.15"
+    static let userAgent = SafariUserAgent.current
     static var requestAtmos: Bool { get { UserDefaults.standard.bool(forKey: "macflix.requestMultichannelAudio") } set { UserDefaults.standard.set(newValue, forKey: "macflix.requestMultichannelAudio") } }
     static var nativeAudioEnabled: Bool { get { UserDefaults.standard.bool(forKey: "macflix.nativeAudioBridgeEnabled") } set { UserDefaults.standard.set(newValue, forKey: "macflix.nativeAudioBridgeEnabled") } }
 }

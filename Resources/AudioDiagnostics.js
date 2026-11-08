@@ -16,6 +16,9 @@ async function (preferAtmos = false, nativeBridgeEnabled = false) {
   }
   const video = document.querySelector('video');
   const boundedState = (value, max) => Number.isInteger(value) && value >= 0 && value <= max ? value : null;
+  const boundedRanges = ranges => Array.isArray(ranges) ? ranges.slice(0, 32).flatMap(range =>
+    Array.isArray(range) && range.length >= 2 && range.slice(0, 2).every(value => Number.isFinite(value) && value >= 0 && value <= 1000000)
+      ? [range.slice(0, 2).map(value => Math.round(value * 1000) / 1000)] : []) : [];
   const errorCode = video?.error?.code;
   report.startup = {
     videoPresent: !!video,
@@ -30,7 +33,7 @@ async function (preferAtmos = false, nativeBridgeEnabled = false) {
     enabled: nativeBridgeEnabled === true,
     available: !!native && typeof native === 'object',
     active: native?.active === true,
-    reason: ['waiting','unavailable','starting','native','preparing','timeout','protected-audio','unsupported-audio','decode-error','listener-failed','stale-session','invalid-message','parser-error','native-error','track-change','media-gone','media-change','queue-limit','navigation'].includes(native?.reason) ? native.reason : 'unknown',
+    reason: ['waiting','unavailable','starting','native','preparing','timeout','preparing-timeout','protected-audio','unsupported-audio','decode-error','listener-failed','stale-session','invalid-message','parser-error','native-error','track-change','media-gone','media-change','queue-limit','navigation'].includes(native?.reason) ? native.reason : 'unknown',
     state: ['idle', 'collecting', 'preparing', 'ready', 'stopped'].includes(native?.state) ? native.state : 'unavailable',
     nativeTime: Number.isFinite(native?.nativeTime) ? Math.max(0, native.nativeTime) : 0,
     driftSeconds: Number.isFinite(native?.driftSeconds) ? native.driftSeconds : 0,
@@ -38,6 +41,22 @@ async function (preferAtmos = false, nativeBridgeEnabled = false) {
     rate: Number.isFinite(native?.rate) ? native.rate : 1,
     segments: Number.isSafeInteger(native?.segments) && native.segments >= 0 ? native.segments : 0,
     bytes: Number.isSafeInteger(native?.bytes) && native.bytes >= 0 ? native.bytes : 0,
+    servedSegments: Number.isSafeInteger(native?.servedSegments) && native.servedSegments >= 0 && native.servedSegments <= 100000 ? native.servedSegments : 0,
+    nativeSeekable: boundedRanges(native?.nativeSeekable),
+    loaded: boundedRanges(native?.loaded),
+    timeline: (() => {
+      const source = native?.timeline;
+      if (!source || typeof source !== 'object') return {};
+      const value = {};
+      for (const key of ['itemTime','webTime','anchorSeconds','targetItemTime','firstSegmentStart','firstSegmentEnd','lastSegmentEnd','sourceBufferTimestampOffset','firstSourceTimestampOffset'])
+        if (Number.isFinite(source[key]) && Math.abs(source[key]) <= 1000000) value[key] = Math.round(source[key] * 1000) / 1000;
+      if (Number.isSafeInteger(source.timestampOffsetChanges) && source.timestampOffsetChanges >= 0 && source.timestampOffsetChanges <= 100000)
+        value.timestampOffsetChanges = source.timestampOffsetChanges;
+      for (const key of ['targetSeekable','targetLoaded','clearJOCSignaled']) if (typeof source[key] === 'boolean') value[key] = source[key];
+      if (['preparing','ready','failed'].includes(source.itemStatus)) value.itemStatus = source.itemStatus;
+      if (['paused','waiting','playing'].includes(source.timeControlStatus)) value.timeControlStatus = source.timeControlStatus;
+      return value;
+    })(),
     audible: native?.audible === true
   };
   const patch = window.__netflixNativeMultichannelStatus;

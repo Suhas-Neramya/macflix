@@ -3,6 +3,11 @@ import Foundation
 @main
 enum PlaybackPolicyTests {
     static func main() {
+        precondition(SafariUserAgent.make(installedVersion: "27.0.1") == "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.0.1 Safari/605.1.15")
+        precondition(SafariUserAgent.make(installedVersion: nil).contains("Version/17.6 Safari/605.1.15"))
+        precondition(SafariUserAgent.make(installedVersion: "27beta.1").contains("Version/17.6 Safari/605.1.15"))
+        precondition(SafariUserAgent.make(installedVersion: "27..1").contains("Version/17.6 Safari/605.1.15"))
+
         precondition(PlaybackPolicy.isNetflixOrigin(protocol: "https", host: "www.netflix.com", port: 0))
         precondition(PlaybackPolicy.isNetflixOrigin(protocol: "https", host: "netflix.com", port: 443))
         precondition(!PlaybackPolicy.isNetflixOrigin(protocol: "https", host: "www.netflix.com", port: 8443))
@@ -45,7 +50,7 @@ enum PlaybackPolicyTests {
         precondition(!shouldRecover(hasError: true))
         precondition(!shouldRecover(editing: true))
 
-        print("Passed: HTTPS Netflix origin/routing and bounded first-play recovery guards.")
+        print("Passed: Safari UA version resolution, HTTPS Netflix origin/routing, and bounded first-play recovery guards.")
     }
 
     private static func shouldRecover(hasStartedPlayback: Bool = false, retryAttempted: Bool = false,
