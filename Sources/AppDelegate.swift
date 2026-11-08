@@ -1,8 +1,10 @@
 import Cocoa
 
 @main
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var windowController: MainWindowController?
+    private let updater = AppUpdater()
 
     static func main() {
         let app = NSApplication.shared
@@ -23,6 +25,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         windowController = controller
         controller.showWindow(nil)
         controller.window?.makeKeyAndOrderFront(nil)
+        StartupAnimation.play(in: controller.window)
+        updater.start(after: 3.1)
         NSApp.activate()
     }
 
@@ -53,6 +57,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let appItem = NSMenuItem(); let app = NSMenu()
         app.addItem(withTitle: "About Macflix", action: #selector(showAbout), keyEquivalent: "")
         app.addItem(NSMenuItem.separator())
+        if updater.isConfigured {
+            let updates = NSMenuItem(title: "Check for Updates…", action: #selector(AppUpdater.checkForUpdates(_:)), keyEquivalent: "")
+            updates.target = updater; app.addItem(updates)
+            app.addItem(NSMenuItem.separator())
+        }
         app.addItem(withTitle: "Hide Macflix", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
         app.addItem(withTitle: "Quit Macflix", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         appItem.submenu = app; menu.addItem(appItem)

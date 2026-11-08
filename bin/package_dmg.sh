@@ -22,6 +22,7 @@ hdiutil create -volname Macflix -srcfolder "$STAGING_DIR/volume" \
     -format UDZO -fs HFS+ "$STAGING_DIR/Macflix.dmg"
 hdiutil verify "$STAGING_DIR/Macflix.dmg"
 
+SPARKLE_DIR="$(bash "$PROJECT_ROOT/bin/fetch_sparkle.sh" "$BUILD_DIR/dependencies")"
 SOURCE_DIR="$STAGING_DIR/source/Macflix-$APP_VERSION-Rebuild"
 mkdir -p "$SOURCE_DIR/Tests"
 for folder in Sources Resources bin; do cp -R "$PROJECT_ROOT/$folder" "$SOURCE_DIR/$folder"; done
@@ -32,6 +33,7 @@ for test in "$PROJECT_ROOT"/Tests/*; do
     [[ -f "$test" ]] && cp "$test" "$SOURCE_DIR/Tests/"
 done
 cp "$PROJECT_ROOT/LICENSE" "$SOURCE_DIR/LICENSE"
+cp "$SPARKLE_DIR/LICENSE" "$SOURCE_DIR/LICENSE-Sparkle.txt"
 cp "$PROJECT_ROOT/.gitignore" "$SOURCE_DIR/.gitignore"
 cp "$PROJECT_ROOT/README.md" "$SOURCE_DIR/README.md"
 cp "$PROJECT_ROOT/RELEASE.md" "$SOURCE_DIR/RELEASE.md"

@@ -8,7 +8,7 @@ mkdir -p "$STAGING_DIR/module-cache"
 
 for test in "$PROJECT_ROOT"/Tests/*.cjs; do node "$test"; done
 xcrun swiftc -module-cache-path "$STAGING_DIR/module-cache" \
-    "$PROJECT_ROOT/Sources/PlaybackPolicy.swift" "$PROJECT_ROOT/Sources/SafariUserAgent.swift" "$PROJECT_ROOT/Tests/PlaybackPolicyTests.swift" \
+    "$PROJECT_ROOT/Sources/PlaybackPolicy.swift" "$PROJECT_ROOT/Sources/SafariUserAgent.swift" "$PROJECT_ROOT/Sources/UpdaterConfiguration.swift" "$PROJECT_ROOT/Tests/PlaybackPolicyTests.swift" \
     -o "$STAGING_DIR/PlaybackPolicyTests"
 "$STAGING_DIR/PlaybackPolicyTests"
 

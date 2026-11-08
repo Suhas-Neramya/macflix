@@ -3,6 +3,12 @@ import Foundation
 @main
 enum PlaybackPolicyTests {
     static func main() {
+        let updaterKey = Data(repeating: 7, count: 32).base64EncodedString()
+        precondition(UpdaterConfiguration.isValid(feedURL: "https://updates.example.com/appcast.xml", publicKey: updaterKey))
+        precondition(!UpdaterConfiguration.isValid(feedURL: "https://updates.example.com/appcast.xml", publicKey: nil))
+        precondition(!UpdaterConfiguration.isValid(feedURL: "http://updates.example.com/appcast.xml", publicKey: updaterKey))
+        precondition(!UpdaterConfiguration.isValid(feedURL: "https://updates.example.com/appcast.xml", publicKey: Data(repeating: 7, count: 31).base64EncodedString()))
+
         precondition(SafariUserAgent.make(installedVersion: "27.0.1") == "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.0.1 Safari/605.1.15")
         precondition(SafariUserAgent.make(installedVersion: nil).contains("Version/17.6 Safari/605.1.15"))
         precondition(SafariUserAgent.make(installedVersion: "27beta.1").contains("Version/17.6 Safari/605.1.15"))
@@ -50,7 +56,7 @@ enum PlaybackPolicyTests {
         precondition(!shouldRecover(hasError: true))
         precondition(!shouldRecover(editing: true))
 
-        print("Passed: Safari UA version resolution, HTTPS Netflix origin/routing, and bounded first-play recovery guards.")
+        print("Passed: updater signing configuration, Safari UA version resolution, Netflix origin/routing, and first-play recovery guards.")
     }
 
     private static func shouldRecover(hasStartedPlayback: Bool = false, retryAttempted: Bool = false,
