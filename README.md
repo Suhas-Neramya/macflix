@@ -1,4 +1,4 @@
-# Macflix Rebuild
+# Macflix
 
 ![Macflix — a focused Netflix app for macOS](docs/macflix-hero.png)
 
